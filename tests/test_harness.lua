@@ -25,9 +25,20 @@ local addonTable = {
   MergeTables = function(dst, src) for k,v in pairs(src) do dst[k]=v end end,
   GetItemInfoUp = function() return nil,nil end,
   GetRandPropPoints = function() return 0 end,
+  StatCapMethods = { AtLeast = 1, AtMost = 2, Exactly = 3 },
+  GUI = { Unlock = function() end },
+  DeepCopy = function(t, cache)
+    if type(t) ~= 'table' then return t end
+    cache = cache or {}
+    if cache[t] then return cache[t] end
+    local c = {}
+    cache[t] = c
+    for k,v in pairs(t) do c[k] = type(v)=='table' and addonTable.DeepCopy(v, cache) or v end
+    return c
+  end,
 }
 
-local ReforgeLite = { itemData = {}, itemStats = {}, pdb={weights={},caps={{stat=0,points={}}, {stat=0,points={}}}}, reforgeTable={}, db={speed=5}, capPresets={{getter=nil}}, computeButton={RenderText=function() end}, conversion={}, methodDebug=nil }
+local ReforgeLite = { itemData = {}, itemStats = {}, pdb={weights={},caps={{stat=0,points={}}, {stat=0,points={}}}}, reforgeTable={}, db={speed=1e9}, capPresets={{getter=nil}}, computeButton={RenderText=function() end}, conversion={}, methodDebug=nil }
 addonTable.ReforgeLite = ReforgeLite
 _G.Round = function(x) return math.floor(x+0.5) end
 _G.SPEC_DRUID_BALANCE=1
@@ -42,12 +53,25 @@ _G.addonTable = addonTable
 _G.tinsert = table.insert
 _G.floor = math.floor
 
+-- Provide default GetCapScore used in ChooseReforgeClassic (returns 0 impact).
+function ReforgeLite:GetCapScore()
+  return 0
+end
+
+function ReforgeLite:UpdateMethodCategory() end
+
 -- Inject file under test
-local enginePath = '../ReforgeEngine.lua'
+local enginePath = 'ReforgeEngine.lua'
 local chunk, loadErr = loadfile(enginePath)
 if not chunk then error('Failed to load engine: '..tostring(loadErr)) end
 -- Call chunk with addonName, addonTable (matching addon file contract: local addonName, addonTable = ...)
 chunk('ReforgeLite', addonTable)
+
+function _G.ReloadEngine()
+  local chunk2, err2 = loadfile(enginePath)
+  if not chunk2 then error('ReloadEngine failed: '..tostring(err2)) end
+  chunk2('ReforgeLite', addonTable)
+end
 
 -- Helper to build fake reforge options
 local function makeOpt(d1,d2,score) return {d1=d1,d2=d2,score=score} end
