@@ -115,14 +115,17 @@ AddReforgeTest('FullCharacter: integration structural validation', function()
   end
 end)
 
-AddReforgeTest('FullCharacter: hit and expertise thresholds 2550 after reforging', function()
+AddReforgeTest('FullCharacter: hit >= 2550 and expertise >= 2550 after compute', function()
   -- Setup fresh state
   ReforgeLite.itemData = {}
   ReforgeLite.itemStats = {}
   ReforgeLite.reforgeTable = {}
   ReforgeLite.pdb = {
     weights = {},
-    caps = { { stat = 0, points = {} }, { stat = 0, points = {} } },
+    caps = {
+      { stat = addonTable.statIds.HIT, points = { { method = addonTable.StatCapMethods.AtLeast, value = 2550 } } },
+      { stat = addonTable.statIds.EXP, points = { { method = addonTable.StatCapMethods.AtLeast, value = 2550 } } },
+    },
     ilvlCap = nil,
     method = nil,
     itemsLocked = {},
@@ -157,6 +160,10 @@ AddReforgeTest('FullCharacter: hit and expertise thresholds 2550 after reforging
   for idx,name in ipairs(order) do
     ReforgeLite.itemStats[idx] = { name=name, getter=function() return totals[name] end }
   end
+
+  -- Weights: strongly favor EXP (needs to be built up), moderate HIT (maintain above cap), low others
+  -- Order: SPIRIT,HASTE,MASTERY,HIT,EXP
+  ReforgeLite.pdb.weights = { 0, 1, 1, 2, 5 }
 
   addonTable.GetItemStatsUp = function(item)
     local c = {}
